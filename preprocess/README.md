@@ -72,7 +72,13 @@ rm -rf preprocess/data_readers/scene_episodes/hm3d_train and preprocess/data_rea
 
 # revise args, e.g., root_dir to save the dataset.
 bash generate_hm3d_train.sh
+
+
+# generate the dataset index
+# revise the parameters.
+python preprocess/generate_index.py
 ```
+
 
 ```
 # change environment
