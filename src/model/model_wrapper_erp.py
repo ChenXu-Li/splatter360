@@ -46,6 +46,7 @@ from .model_wrapper_helper import compute_l1_sphere_loss, erode
 from ..geometry.layers import Cube2Equirec #, Concat, BiProj, CEELayer
 from ..scripts.compute_depth_metrics import compute_depth_metrics_batched
 from ..geometry.z_depth_to_distance import depth_to_distance_map_batch
+from .ply_export import export_ply
 @dataclass
 class OptimizerCfg:
     lr: float
@@ -59,6 +60,7 @@ class TestCfg:
     compute_scores: bool
     save_image: bool
     save_video: bool
+    save_gaussians: bool
     eval_time_skip_steps: int
 
     eval_depth: bool # default is False
@@ -323,11 +325,14 @@ class ModelWrapperERP(LightningModule):
         assert b == 1
 
         # Render Gaussians.
+        visualization_dump = {} if self.test_cfg.save_gaussians else None
         with self.benchmarker.time("encoder"):
             gaussians, pred_depth = self.encoder(
                 batch["context"],
                 self.global_step,
                 deterministic=False,
+                visualization_dump=visualization_dump,
+                scene_names=batch["scene"],
             )
         
         
@@ -347,6 +352,24 @@ class ModelWrapperERP(LightningModule):
         (scene,) = batch["scene"]
         name = get_cfg()["wandb"]["name"]
         path = self.image_dir / name
+        # Optionally export the Gaussian scene to a PLY file for 3D inspection.
+        if self.test_cfg.save_gaussians and visualization_dump is not None:
+            means = gaussians.means[0]
+            harmonics = gaussians.harmonics[0]
+            opacities = gaussians.opacities[0]
+            scales = visualization_dump["scales"][0]
+            rotations = visualization_dump["rotations"][0]
+            # Use the first context ERP camera as reference.
+            extrinsics = batch["context"]["extrinsics_sphere"][0, 0]
+            export_ply(
+                extrinsics,
+                means,
+                scales,
+                rotations,
+                harmonics,
+                opacities,
+                path / "render" / scene / "gaussians.ply",
+            )
         if self.test_cfg.eval_depth:
             depths_prob = output.depth[0]
             depths_prob = rearrange(depths_prob, "(v cubes)... -> v cubes ...", v=v, cubes=num_cubes) # v cubes h w

@@ -168,7 +168,14 @@ class DatasetHM3D(IterableDataset):
                 #     continue
                 
                 # panorama rgbs
-                rgb_dir = rgb_root / scene / "pano" #/ rgbd_name
+                rgb_dir = rgb_root / scene / "pano"  # / rgbd_name
+
+                # If the RGB directory for this scene does not exist, skip it.
+                # This allows running evaluation on a subset of scenes without
+                # requiring all scenes listed in the index to be present.
+                if not rgb_dir.exists():
+                    print(f"RGB directory not found for scene {scene}: {rgb_dir}. Skipping.")
+                    continue
 
                 rgb_files = sorted(
                     # [path for path in rgb_dir.iterdir() if path.suffix == ".torch"]
@@ -383,7 +390,13 @@ class DatasetHM3D(IterableDataset):
     def index(self) -> dict[str, Path]:
         merged_index = {}
         data_stages = [self.data_stage]
-        if self.cfg.overfit_to_scene is not None:
+        # When overfitting to a single scene during training, originally both
+        # the "test" and "train" splits were merged. This can lead to
+        # duplicate scene keys across splits (e.g., replica), triggering the
+        # uniqueness assertion below. For pure inference / testing with
+        # `overfit_to_scene` set, we only need the current `data_stage`
+        # (typically "test"), so we avoid merging multiple splits.
+        if self.cfg.overfit_to_scene is not None and self.stage == "train":
             data_stages = ("test", "train")
         for data_stage in data_stages:
             for root in self.cfg.roots:

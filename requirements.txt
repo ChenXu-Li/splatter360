@@ -1,4 +1,7 @@
 wheel
+torch==2.1.2+cu118
+torchvision==0.16.2
+torchaudio==2.1.2 
 tqdm
 pytorch_lightning
 black
@@ -14,7 +17,6 @@ colorspacious
 matplotlib
 moviepy
 imageio
-git+https://github.com/dcharatan/diff-gaussian-rasterization-modified
 timm
 dacite
 lpips
@@ -24,3 +26,4 @@ tabulate
 svg.py
 opencv-python==4.6.0.66
 sk-video
+git+https://github.com/dcharatan/diff-gaussian-rasterization-modified
